@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "GoodHamburger.BlazorApp",
   "resources": {
-    "hash": "sha256-rzt/+ucUBWf1Q3mEo3EsamVC0JndcOv3pk0LrFdxt7U=",
+    "hash": "sha256-rh5t244WPQnmn3hxCVFuPU1425YEig+uuakYIjSxF44=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-nElGk+CZFyq0PbPm4JU8avD6lER7x9Z1C54BK7qY12Q="
     },
@@ -68,7 +68,7 @@
       "System.Threading.wasm": "sha256-2XxvKK89Bd7ngzD6+eGOlxl/qOVaCHVkcFiCaBXXzTs=",
       "System.wasm": "sha256-U1ugCDIgbEW6lR5UkMCUZh1lhLDB62fhi0ZthK9FNyg=",
       "System.Private.CoreLib.wasm": "sha256-i7nbLIhGJHBjOrwAD13bV7LqO25PRTRn/EOvtTv1DQI=",
-      "GoodHamburger.BlazorApp.wasm": "sha256-J/rZtlW160+BjokJJ4bFrpjLIDm0h0xDgrIocckaWrc="
+      "GoodHamburger.BlazorApp.wasm": "sha256-6bvH0YxLVsGcOeAGJReAibMUp0XkfJzgm90/8mVkeiI="
     }
   },
   "cacheBootResources": true,
