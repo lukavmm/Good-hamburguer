@@ -1,4 +1,4 @@
-using GoodHamburger.API.Middleware;
+﻿using GoodHamburger.API.Middleware;
 using GoodHamburger.Application.Interfaces;
 using GoodHamburger.Application.UseCases;
 using GoodHamburger.Domain.Interfaces;
@@ -110,14 +110,16 @@ using (var scope = app.Services.CreateScope())
 
 app.UseMiddleware<GlobalExceptionHandler>();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction()) // está aparecendo em production também para teste da plataforma render
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.MapGet("/", () => "API GoodHamburger está rodando 🚀"); //para teste no render deploy
+
 app.UseCors("AllowAll");
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection(); // comentado para deploy no render
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
