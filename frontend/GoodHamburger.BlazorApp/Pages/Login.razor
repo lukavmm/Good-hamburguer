@@ -1,0 +1,126 @@
+@page "/"
+@page "/login"
+@layout AuthLayout
+@using GoodHamburger.BlazorApp.Services
+@using GoodHamburger.BlazorApp.Models
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+
+<PageTitle>Login - GoodHamburger</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <i class="bi bi-shop" style="font-size: 3em; color: #667eea;"></i>
+            <h1>GoodHamburger</h1>
+            <p>Faça login para continuar</p>
+        </div>
+
+        <EditForm Model="loginModel" OnValidSubmit="HandleLogin" class="auth-form">
+            <DataAnnotationsValidator />
+
+            @if (errorMessage != null)
+            {
+                <div class="error" style="margin-bottom: 20px;">
+                    <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+                </div>
+            }
+
+            <div class="form-group">
+                <label>
+                    <i class="bi bi-person-fill"></i>
+                    <span>Usuário</span>
+                </label>
+                <InputText @bind-Value="loginModel.Username" class="form-control" placeholder="Digite seu usuário" />
+                <ValidationMessage For="@(() => loginModel.Username)" />
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <i class="bi bi-lock-fill"></i>
+                    <span>Senha</span>
+                </label>
+                <InputText @bind-Value="loginModel.Password" type="password" class="form-control" placeholder="Digite sua senha" />
+                <ValidationMessage For="@(() => loginModel.Password)" />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-small"></span>
+                    <span>Entrando...</span>
+                }
+                else
+                {
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    <span>Entrar</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="auth-footer">
+            <p>Não tem uma conta?</p>
+            <a href="/register" class="link-primary">
+                <i class="bi bi-person-plus-fill"></i> Criar conta
+            </a>
+        </div>
+    </div>
+</div>
+
+@code {
+private LoginRequest loginModel = new();
+private string? errorMessage;
+private bool isLoading;
+
+protected override async Task OnInitializedAsync()
+{
+    // Se já estiver autenticado, redireciona
+    if (await AuthService.IsAuthenticatedAsync())
+    {
+        var role = await AuthService.GetRoleAsync();
+        if (role == "Admin")
+        {
+            Navigation.NavigateTo("/menu-management", true);
+        }
+        else
+        {
+            Navigation.NavigateTo("/home", true);
+        }
+    }
+}
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var response = await AuthService.LoginAsync(loginModel);
+            ToastService.ShowSuccess("Login realizado!", $"Bem-vindo(a), {response.Username}!");
+            
+            // Pequeno delay para garantir que o estado foi atualizado
+            await Task.Delay(100);
+            
+            // Redireciona baseado na role
+            if (response.Role == "Admin")
+            {
+                Navigation.NavigateTo("/menu-management");
+            }
+            else
+            {
+                Navigation.NavigateTo("/home");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Usuário ou senha inválidos";
+            ToastService.ShowError("Erro ao fazer login", errorMessage);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

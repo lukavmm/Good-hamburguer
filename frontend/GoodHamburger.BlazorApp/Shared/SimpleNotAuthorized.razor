@@ -1,0 +1,24 @@
+@inject NavigationManager Navigation
+
+<div class="loading">
+    <div class="spinner"></div>
+    <p>Redirecionando para login...</p>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var currentUri = new Uri(Navigation.Uri);
+            var currentPath = currentUri.AbsolutePath;
+            
+            // Só redireciona se não estiver já em /login ou /register
+            if (currentPath != "/login" && currentPath != "/register" && currentPath != "/")
+            {
+                await Task.Yield();
+                Navigation.NavigateTo("/login");
+            }
+        }
+    }
+}

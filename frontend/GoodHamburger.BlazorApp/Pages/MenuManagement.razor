@@ -1,0 +1,247 @@
+@page "/menu-management"
+@attribute [Authorize(Roles = "Admin")]
+@using GoodHamburger.BlazorApp.Services
+@using GoodHamburger.BlazorApp.Models
+@using Microsoft.AspNetCore.Authorization
+@inject IMenuItemManagementService MenuItemService
+@inject IJSRuntime JSRuntime
+@inject ToastService ToastService
+
+<PageTitle>Gerenciar Cardápio</PageTitle>
+
+<div class="container">
+    <div class="management-header">
+        <h1><i class="bi bi-gear-fill" style="font-size: 0.9em;"></i> Gerenciar Cardápio</h1>
+        <button class="btn btn-success" @onclick="OpenCreateModal">
+            <i class="bi bi-plus-circle"></i> Novo Item
+        </button>
+    </div>
+
+    @if (loading)
+    {
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Carregando itens...</div>
+        </div>
+    }
+    else if (error != null)
+    {
+        <div class="error">@error</div>
+    }
+    else
+    {
+        <div class="management-grid">
+            @foreach (var item in menuItems)
+            {
+                <div class="management-card">
+                    <div class="card-header">
+                        <span class="badge @GetBadgeClass(item.Type)">@GetTypeLabel(item.Type)</span>
+                        <div class="card-actions">
+                            <button class="btn-icon" @onclick="() => OpenEditModal(item)" title="Editar">
+                                <i class="bi bi-pencil-fill"></i>
+                            </button>
+                            <button class="btn-icon btn-danger-icon" @onclick="() => DeleteItem(item.Id)" title="Excluir">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <h3>@item.Name</h3>
+                    <div class="price">R$ @item.Price.ToString("F2")</div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (showModal)
+    {
+        <div class="modal-backdrop" @onclick="CloseModal">
+            <div class="modal-content" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <h2>@(isEditing ? "Editar Item" : "Novo Item")</h2>
+                    <button class="btn-close" @onclick="CloseModal">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    @if (modalError != null)
+                    {
+                        <div class="error">@modalError</div>
+                    }
+                    
+                    <div class="form-group">
+                        <label>Nome</label>
+                        <input type="text" class="form-control" @bind="currentItem.Name" placeholder="Ex: X-Burger" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Preço (R$)</label>
+                        <input type="number" step="0.01" class="form-control" @bind="currentItem.Price" placeholder="0.00" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select class="form-control" @bind="currentItem.Type">
+                            <option value="0">Sanduíche</option>
+                            <option value="1">Fritas</option>
+                            <option value="2">Bebida</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="SaveItem">
+                        <i class="bi bi-save"></i> Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+private List<MenuItemModel> menuItems = new();
+private MenuItemModel currentItem = new();
+private bool loading = true;
+private string? error;
+private string? modalError;
+private bool showModal;
+private bool isEditing;
+
+protected override async Task OnInitializedAsync()
+{
+    await LoadItems();
+}
+
+private async Task LoadItems()
+{
+    loading = true;
+    error = null;
+
+    try
+    {
+        menuItems = await MenuItemService.GetAllAsync();
+    }
+    catch (Exception ex)
+    {
+        error = $"Erro ao carregar itens: {ex.Message}";
+        ToastService.ShowError("Erro ao Carregar", ex.Message);
+    }
+    finally
+    {
+        loading = false;
+    }
+}
+
+private void OpenCreateModal()
+{
+    currentItem = new MenuItemModel();
+    isEditing = false;
+    showModal = true;
+    modalError = null;
+}
+
+private void OpenEditModal(MenuItemModel item)
+{
+    currentItem = new MenuItemModel
+    {
+        Id = item.Id,
+        Name = item.Name,
+        Price = item.Price,
+        Type = item.Type
+    };
+    isEditing = true;
+    showModal = true;
+    modalError = null;
+}
+
+private void CloseModal()
+{
+    showModal = false;
+    modalError = null;
+}
+
+private async Task SaveItem()
+{
+    modalError = null;
+
+    if (string.IsNullOrWhiteSpace(currentItem.Name))
+    {
+        modalError = "Nome é obrigatório";
+        return;
+    }
+
+    if (currentItem.Price <= 0)
+    {
+        modalError = "Preço deve ser maior que zero";
+        return;
+    }
+
+    try
+    {
+        if (isEditing)
+        {
+            await MenuItemService.UpdateAsync(currentItem.Id, currentItem);
+            ToastService.ShowSuccess("Item Atualizado", $"{currentItem.Name} foi atualizado com sucesso!");
+        }
+        else
+        {
+            await MenuItemService.CreateAsync(currentItem);
+            ToastService.ShowSuccess("Item Criado", $"{currentItem.Name} foi adicionado ao cardápio!");
+        }
+
+        await LoadItems();
+        CloseModal();
+    }
+    catch (Exception ex)
+    {
+        modalError = $"Erro ao salvar: {ex.Message}";
+        ToastService.ShowError("Erro ao Salvar", ex.Message);
+    }
+}
+
+    private async Task DeleteItem(Guid id)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Tem certeza que deseja excluir este item?"))
+            return;
+
+        var itemToDelete = menuItems.FirstOrDefault(x => x.Id == id);
+        var itemName = itemToDelete?.Name ?? "Item";
+
+        try
+        {
+            await MenuItemService.DeleteAsync(id);
+            ToastService.ShowSuccess("Item Excluído", $"{itemName} foi removido do cardápio!");
+            await LoadItems();
+        }
+        catch (Exception ex)
+        {
+            error = $"Erro ao excluir item: {ex.Message}";
+            ToastService.ShowError("Erro ao Excluir", ex.Message);
+        }
+    }
+
+    private string GetBadgeClass(int type)
+    {
+        return type switch
+        {
+            0 => "badge-sandwich",
+            1 => "badge-fries",
+            2 => "badge-drink",
+            _ => ""
+        };
+    }
+
+    private string GetTypeLabel(int type)
+    {
+        return type switch
+        {
+            0 => "Sanduíche",
+            1 => "Fritas",
+            2 => "Bebida",
+            _ => ""
+        };
+    }
+}
+
